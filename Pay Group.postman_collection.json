@@ -145,6 +145,70 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "/admin/best-profession",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/admin/best-profession?start=2024-02-01&end=2024-02-29",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"admin",
+						"best-profession"
+					],
+					"query": [
+						{
+							"key": "start",
+							"value": "2024-02-01"
+						},
+						{
+							"key": "end",
+							"value": "2024-02-29"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/admin/best-profession Copy",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/admin/best-clients?start=2024-02-01&end=2024-02-29&limit=5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"admin",
+						"best-clients"
+					],
+					"query": [
+						{
+							"key": "start",
+							"value": "2024-02-01"
+						},
+						{
+							"key": "end",
+							"value": "2024-02-29"
+						},
+						{
+							"key": "limit",
+							"value": "5"
+						}
+					]
+				}
+			},
+			"response": []
 		}
 	]
 }

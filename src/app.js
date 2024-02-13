@@ -2,7 +2,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Sequelize } = require('sequelize');
+const { Op } = require('sequelize');
 const { sequelize } = require('./model');
+const { Job, Profile, Contract } = sequelize.models;
 const { getProfile } = require('./middleware/getProfile');
 
 // Create an Express application
@@ -224,6 +226,110 @@ app.post('/balances/deposit/:userId', getProfile, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// GET /admin/best-profession?start=<date>&end=<date>
+app.get('/admin/best-profession', async (req, res) => {
+    // Extracting start and end dates from the query parameters
+    const { start, end } = req.query;
+
+    try {
+        // Find the profession that earned the most money within the specified date range
+        const bestProfession = await Job.findAll({
+            // Selecting attributes to include in the result
+            attributes: ['Contract.Contractor.profession', [sequelize.fn('sum', sequelize.col('price')), 'totalEarned']],
+            include: [{
+                // Including the Contract model
+                model: Contract,
+                as: 'Contract',
+                attributes: [],
+                where: {
+                    // Filtering contracts that are in progress and within the specified date range
+                    status: 'in_progress',
+                    createdAt: {
+                        [Op.between]: [start, end]
+                    }
+                },
+                include: [{
+                    // Including the Profile model (Contractor)
+                    model: Profile,
+                    as: 'Contractor',
+                    attributes: [],
+                    where: { type: 'contractor' } // Filtering only contractors
+                }]
+            }],
+            // Grouping the result by Contractor's profession
+            group: ['Contract.Contractor.profession'],
+            // Ordering the result by totalEarned in descending order
+            order: [[sequelize.literal('totalEarned'), 'DESC']],
+            // Limiting the result to 1 entry
+            limit: 1
+        });
+
+        // Sending the result as JSON response
+        res.json(bestProfession);
+    } catch (error) {
+        // Handling errors
+        console.error('Error best-profession', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
+
+// GET /admin/best-clients?start=<date>&end=<date>&limit=<integer>
+app.get('/admin/best-clients', async (req, res) => {
+    // Extracting start, end, and limit from the query parameters
+    const { start, end, limit = 2 } = req.query;
+
+    try {
+        // Finding the best clients based on the total amount paid for jobs within the specified date range
+        const bestClients = await Job.findAll({
+            // Selecting attributes to include in the result
+            attributes: [
+                [sequelize.fn('SUM', sequelize.col('price')), 'totalPaid'], // Calculating the total amount paid
+                [sequelize.literal('Contract.ClientId'), 'id'], // Selecting the client ID
+                [sequelize.literal('`Contract->Client`.`firstName` || " " || `Contract->Client`.`lastName`'), 'fullName'] // Concatenating first name and last name to get the full name
+            ],
+            include: [{
+                // Including the Contract model
+                model: Contract,
+                as: 'Contract',
+                attributes: [],
+                where: {
+                    // Filtering contracts that are in progress and within the specified date range
+                    status: 'in_progress',
+                    createdAt: {
+                        [Op.between]: [start, end]
+                    }
+                },
+                include: [{
+                    // Including the Profile model (Client)
+                    model: Profile,
+                    as: 'Client',
+                    attributes: [] // No attributes needed for the Client
+                }]
+            }],
+            // Grouping the result by Client ID
+            group: ['Contract.ClientId'],
+            // Ordering the result by totalPaid in descending order
+            order: [[sequelize.literal('totalPaid'), 'DESC']],
+            // Limiting the result to the specified number of clients
+            limit: parseInt(limit)
+        });
+
+        // Formatting the result to include only the necessary fields
+        res.json(bestClients.map(job => ({
+            id: job.dataValues.id, // Client ID
+            fullName: job.dataValues.fullName, // Full name of the client
+            totalPaid: job.dataValues.totalPaid // Total amount paid by the client
+        })));
+    } catch (error) {
+        // Handling errors
+        console.error('Error best-clients', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 
 
 module.exports = app;
